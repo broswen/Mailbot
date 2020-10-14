@@ -1,0 +1,74 @@
+service: mailbot
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+  stage: dev
+  region: us-east-1
+
+  memorySize: 512
+  timeout: 3
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:Scan"
+      Resource: !GetAtt EmailSubscriptions.Arn
+    - Effect: "Allow"
+      Action:
+        - "ses:SendBulkTemplatedEmail"
+        - "ses:SendBulkEmail"
+        - "ses:SendTemplatedEmail"
+        - "ses:sendEmail"
+      Resource: "*" 
+
+  environment:
+    EMAILSUBSCRIPTIONS: !Ref EmailSubscriptions
+    EMAILTEMPLATE: !GetAtt EmailTemplate.Arn
+    FROMEMAIL: test@test.com
+
+functions:
+  Subscribe:
+    handler: src/lambdas/Subscribe.handler
+    events:
+      - http:
+          path: subscribe
+          method: post
+
+  UnSubscribe:
+    handler: src/lambdas/UnSubscribe.handler
+    events:
+      - http:
+          path: unsubscribe
+          method: post
+
+  SendEmail:
+    handler: src/lambdas/SendEmail.handler
+
+resources:
+  Resources:
+    EmailSubscriptions:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: EmailSubscriptions
+        AttributeDefinitions:
+          - AttributeName: "_email"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "_email"
+            KeyType: "HASH"
+        BillingMode: PAY_PER_REQUEST
+
+    EmailTemplate:
+        Type: AWS::SES::Template
+        Properties:
+          Template:
+            TemplateName: Mailbot-${self:provider.stage}
+            SubjectPart: Mailbot Email! 
+            TextPart: "This is an automated email from Mailbot! Your email is {{email}} ."
