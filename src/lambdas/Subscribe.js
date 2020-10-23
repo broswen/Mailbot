@@ -1,6 +1,7 @@
 'use strict';
 const AWS = require('aws-sdk');
 const DYNAMO = new AWS.DynamoDB.DocumentClient();
+const {v4: uuidv4} = require('uuid');
 
 const qs = require('querystring');
 
@@ -22,6 +23,7 @@ module.exports.handler = async event => {
   try {
     const params = {
       Item: {
+        "_id": uuidv4(),
         "_email": body.email,
         "_timestamp": new Date().toISOString()
       },

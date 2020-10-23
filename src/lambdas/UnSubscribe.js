@@ -5,10 +5,10 @@ const DYNAMO = new AWS.DynamoDB.DocumentClient();
 const qs = require('querystring');
 
 module.exports.handler = async event => {
-  let body;
+  let id;
   try {
-    body = qs.parse(event.body);
-    if(!('email' in body)) throw new Error('must include email')
+    if(!event.queryStringParameters || !('id' in event.queryStringParameters)) throw new Error('invalid link')
+    id = event.queryStringParameters.id;
   } catch (error) {
     return {
       statusCode: 400,
@@ -19,7 +19,7 @@ module.exports.handler = async event => {
   try {
     const params = {
       Key: {
-        "_email": body.email,
+        "_id": id,
       },
       TableName: process.env.EMAILSUBSCRIPTIONS
     }
@@ -36,7 +36,7 @@ module.exports.handler = async event => {
     statusCode: 200,
     body: JSON.stringify(
       {
-        message: 'unsubscribed',
+        message: 'successfully unsubscribed!',
       }
     )
   };

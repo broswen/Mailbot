@@ -19,7 +19,8 @@ provider:
         - "dynamodb:UpdateItem"
         - "dynamodb:DeleteItem"
         - "dynamodb:Scan"
-      Resource: !GetAtt EmailSubscriptions.Arn
+      Resource: 
+        - !GetAtt EmailSubscriptions.Arn
     - Effect: "Allow"
       Action:
         - "ses:SendBulkTemplatedEmail"
@@ -30,7 +31,7 @@ provider:
 
   environment:
     EMAILSUBSCRIPTIONS: !Ref EmailSubscriptions
-    EMAILTEMPLATE: !GetAtt EmailTemplate.Arn
+    EMAILTEMPLATE: !Ref EmailTemplate
     FROMEMAIL: test@test.com
 
 functions:
@@ -46,29 +47,10 @@ functions:
     events:
       - http:
           path: unsubscribe
-          method: post
+          method: get 
 
   SendEmail:
     handler: src/lambdas/SendEmail.handler
 
 resources:
-  Resources:
-    EmailSubscriptions:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: EmailSubscriptions
-        AttributeDefinitions:
-          - AttributeName: "_email"
-            AttributeType: "S"
-        KeySchema:
-          - AttributeName: "_email"
-            KeyType: "HASH"
-        BillingMode: PAY_PER_REQUEST
-
-    EmailTemplate:
-        Type: AWS::SES::Template
-        Properties:
-          Template:
-            TemplateName: Mailbot-${self:provider.stage}
-            SubjectPart: Mailbot Email! 
-            TextPart: "This is an automated email from Mailbot! Your email is {{email}} ."
+  - ${file(./cfn-resources.yml)}

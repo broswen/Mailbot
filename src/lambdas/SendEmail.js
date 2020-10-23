@@ -9,9 +9,10 @@ module.exports.handler = async event => {
   let emails;
   try {
     const params = {
-      ProjectionExpression: '#e',
+      ProjectionExpression: '#e, #i',
       ExpressionAttributeNames: {
-        '#e': '_email'
+        '#e': '_email',
+        '#i': '_id'
       },
       TableName: process.env.EMAILSUBSCRIPTIONS
     }
@@ -22,6 +23,11 @@ module.exports.handler = async event => {
   } catch (error) {
     throw error; 
   }
+
+  if(emails.Count === 0) {
+    console.log("No subscriptions");
+    return;
+  }
   console.log(emails);
   emails = emails.Items.map(item => ({
           Destination: {
@@ -29,7 +35,7 @@ module.exports.handler = async event => {
               item._email 
             ]
           },
-          ReplacementTemplateData: JSON.stringify({email: item._email})
+          ReplacementTemplateData: JSON.stringify({email: item._email, unsub: item._id})
         }));
 
   console.log(emails);
@@ -39,7 +45,7 @@ module.exports.handler = async event => {
       Destinations: emails,
       Source: `Mailbot <${process.env.FROMEMAIL}>`,
       Template: process.env.EMAILTEMPLATE,
-      DefaultTemplateData: JSON.stringify({email: '<invalid email>'})
+      DefaultTemplateData: JSON.stringify({email: '<invalid email>', unsub: '<error>'})
     }
     
     await SES.sendBulkTemplatedEmail(params).promise();
